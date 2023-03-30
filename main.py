@@ -1,0 +1,86 @@
+import os.path
+
+from torch.utils.tensorboard import SummaryWriter
+from ReadData import BoneData
+from torch import device, nn, cuda, optim
+import torch
+from torch.utils.data import random_split, DataLoader
+from torchvision import transforms
+from PoseModule import PoseModule
+
+device = device("cuda" if cuda.is_available() else "cpu")
+
+pose = "Smash"
+root_dir = os.path.join("Data", pose)
+label_dir = "positive"
+batch_size = 4
+num_epoch = 50
+
+transform = transforms.Compose(
+    transforms.ToTensor()
+)
+
+ds = BoneData(root_dir, label_dir, transform)
+train_rt, val_rt = 0.7, 0.1
+train_len, val_len, test_len = train_rt * len(ds), val_rt * len(ds), len(ds) - train_rt * len(ds) - val_rt * len(ds)
+train_ds, val_ds, test_ds = random_split(ds, [train_len, val_len, test_len])
+
+train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
+val_dl = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
+test_dl = DataLoader(dataset=test_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
+
+poseModule = PoseModule().to(device)
+
+loss_fn = nn.MSELoss().to(device)
+
+optimizer = optim.Adagrad(poseModule.parameters())
+
+writer = SummaryWriter("../logs")
+
+train_step = 0
+
+for epoch in range(num_epoch):
+    print(f"number of epoch: {epoch + 1}")
+
+    # training
+    for in_data, target in train_dl:
+        in_data = in_data.to(device)
+        target = target.to(device)
+
+        output = poseModule(in_data)
+        loss = loss_fn(output, target)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        train_step += 1
+        print(f"step:{train_step}, Loss: {loss.item()}")
+        writer.add_scalar("train_loss", loss.item(), train_step)
+
+    # testing
+    total_val_loss = 0
+    with torch.no_grad():
+        for in_data, target in val_dl:
+            in_data = in_data.to(device)
+            target = target.to(device)
+
+            output = poseModule(in_data)
+            loss = loss_fn(output, target)
+            total_val_loss += loss.item()
+
+    print(f"total validation loss: {total_val_loss}")
+    writer.add_scalar("validation_loss", total_val_loss, epoch + 1)
+
+    torch.save(poseModule.state_dict(), os.path.join("trained_models", pose, f"poseModule{epoch + 1}"))
+
+total_test_loss = 0
+with torch.no_grad():
+    for in_data, target in test_dl:
+        in_data = in_data.to(device)
+        target = target.to(device)
+
+        output = poseModule(in_data)
+        loss = loss_fn(output, target)
+        total_test_loss += loss.item()
+print(f"total validation loss: {total_test_loss}")
