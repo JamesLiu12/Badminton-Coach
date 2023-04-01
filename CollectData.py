@@ -3,7 +3,7 @@ import mediapipe as mp
 import time
 import os
 
-def Webcam2Landmarks(duration=1, frameCount=5):
+def Webcam2Landmarks(duration=2, frameCount=8):
     landmark_result = []
     img_result = []
     mp_drawing = mp.solutions.drawing_utils
@@ -57,13 +57,16 @@ def Webcam2Landmarks(duration=1, frameCount=5):
 def WriteLandmarkss2File(file_path, landmarkss):
     file = open(file_path, "w")
     for landmarks in landmarkss:
+        cnt = 0
         for landmark in landmarks:
             file.write(str(landmark.x))
             file.write(",")
             file.write(str(landmark.y))
             file.write(",")
             file.write(str(landmark.z))
-            file.write(",")
+            if cnt != 32:
+                file.write(",")
+            cnt += 1
         file.write("\n")
 
 def CollectSamples(sample_count, pose, label):
@@ -77,7 +80,7 @@ def CollectSamples(sample_count, pose, label):
     for i in range(sample_count):
         landmarkss, imgs = Webcam2Landmarks()
         WriteLandmarkss2File(os.path.join("Data/", pose, label, f"{pose}{count}.csv"), landmarkss)
-        for i in range(5):
+        for i in range(8):
             try:
                 os.makedirs(os.path.join("Images", pose, label, f"{pose}{count}"))
             except:

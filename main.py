@@ -9,20 +9,20 @@ from torchvision import transforms
 from PoseModule import PoseModule
 
 device = device("cuda" if cuda.is_available() else "cpu")
-
 pose = "Smash"
 root_dir = os.path.join("Data", pose)
 label_dir = "positive"
 batch_size = 4
 num_epoch = 50
 
-transform = transforms.Compose(
-    transforms.ToTensor()
-)
+# transform = transforms.Compose(
+#     transforms.ToTensor()
+# )
 
-ds = BoneData(root_dir, label_dir, transform)
+ds = BoneData(root_dir, label_dir)
 train_rt, val_rt = 0.7, 0.1
-train_len, val_len, test_len = train_rt * len(ds), val_rt * len(ds), len(ds) - train_rt * len(ds) - val_rt * len(ds)
+train_len, val_len = round(train_rt * len(ds)), round(val_rt * len(ds))
+test_len = len(ds) - train_len - val_len
 train_ds, val_ds, test_ds = random_split(ds, [train_len, val_len, test_len])
 
 train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
@@ -33,9 +33,10 @@ poseModule = PoseModule().to(device)
 
 loss_fn = nn.MSELoss().to(device)
 
-optimizer = optim.Adagrad(poseModule.parameters())
+learning_rate = 1e-2
+optimizer = optim.SGD(poseModule.parameters(), lr=learning_rate)
 
-writer = SummaryWriter("../logs")
+writer = SummaryWriter("logs")
 
 train_step = 0
 
@@ -72,7 +73,11 @@ for epoch in range(num_epoch):
     print(f"total validation loss: {total_val_loss}")
     writer.add_scalar("validation_loss", total_val_loss, epoch + 1)
 
-    torch.save(poseModule.state_dict(), os.path.join("trained_models", pose, f"poseModule{epoch + 1}"))
+    try:
+        os.makedirs(os.path.join("trained_models", pose))
+    except:
+        pass
+    torch.save(poseModule.state_dict(), os.path.join("trained_models", pose, f"poseModule{epoch + 1}.pth"))
 
 total_test_loss = 0
 with torch.no_grad():
@@ -83,4 +88,4 @@ with torch.no_grad():
         output = poseModule(in_data)
         loss = loss_fn(output, target)
         total_test_loss += loss.item()
-print(f"total validation loss: {total_test_loss}")
+print(f"total test loss: {total_test_loss}")
