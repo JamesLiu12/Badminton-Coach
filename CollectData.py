@@ -71,6 +71,10 @@ def WriteLandmarkss2File(file_path, landmarkss):
 
 def CollectSamples(sample_count, pose, label):
     count = 1
+    try:
+        os.makedirs(os.path.join("Data/", pose, label))
+    except:
+        pass
     filename_list = os.listdir(os.path.join("Data/", pose, label))
     if len(filename_list) > 0:
         for i in range(len(filename_list)):
@@ -91,4 +95,4 @@ def CollectSamples(sample_count, pose, label):
         count += 1
 
 
-CollectSamples(10, "Smash", "positive")
+CollectSamples(10, "Smash", "negative")

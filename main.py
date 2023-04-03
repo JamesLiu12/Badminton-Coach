@@ -10,8 +10,7 @@ from PoseModule import PoseModule
 
 device = device("cuda" if cuda.is_available() else "cpu")
 pose = "Smash"
-root_dir = os.path.join("Data", pose)
-label_dir = "positive"
+root_dir = "Data"
 batch_size = 4
 num_epoch = 50
 
@@ -19,7 +18,7 @@ num_epoch = 50
 #     transforms.ToTensor()
 # )
 
-ds = BoneData(root_dir, label_dir)
+ds = BoneData(root_dir, pose)
 train_rt, val_rt = 0.7, 0.1
 train_len, val_len = round(train_rt * len(ds)), round(val_rt * len(ds))
 test_len = len(ds) - train_len - val_len
@@ -56,10 +55,11 @@ for epoch in range(num_epoch):
         optimizer.step()
 
         train_step += 1
-        print(f"step:{train_step}, Loss: {loss.item()}")
+        if train_step % 10 == 0:
+            print(f"step:{train_step}, Loss: {loss.item()}")
         writer.add_scalar("train_loss", loss.item(), train_step)
 
-    # testing
+    # validating
     total_val_loss = 0
     with torch.no_grad():
         for in_data, target in val_dl:
@@ -72,6 +72,7 @@ for epoch in range(num_epoch):
 
     print(f"total validation loss: {total_val_loss}")
     writer.add_scalar("validation_loss", total_val_loss, epoch + 1)
+    print("")
 
     try:
         os.makedirs(os.path.join("trained_models", pose))
