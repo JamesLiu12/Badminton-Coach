@@ -6,17 +6,20 @@ from torch import device, nn, cuda, optim
 import torch
 from torch.utils.data import random_split, DataLoader
 from torchvision import transforms
-from PoseModule import PoseModule
+from DynamicPoseModule import *
+
+# could be Dynamic or Start
+mode = "Dynamic"
+root_dir = ""
+if mode == 'Dynamic':
+    root_dir = "DynamicData"
+else:
+    root_dir = "StartData"
 
 device = device("cuda" if cuda.is_available() else "cpu")
 pose = "Smash"
-root_dir = "Data"
 batch_size = 4
 num_epoch = 50
-
-# transform = transforms.Compose(
-#     transforms.ToTensor()
-# )
 
 ds = BoneData(root_dir, pose)
 train_rt, val_rt = 0.7, 0.1
@@ -28,7 +31,10 @@ train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True, num
 val_dl = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
 test_dl = DataLoader(dataset=test_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False)
 
-poseModule = PoseModule().to(device)
+if mode == 'Dynamic':
+    poseModule = DynamicPoseModule().to(device)
+else:
+    poseModule = StartPoseModule().to(device)
 
 loss_fn = nn.MSELoss().to(device)
 
@@ -75,10 +81,10 @@ for epoch in range(num_epoch):
     print("")
 
     try:
-        os.makedirs(os.path.join("trained_models", pose))
+        os.makedirs(os.path.join("trained_models_" + mode, pose))
     except:
         pass
-    torch.save(poseModule.state_dict(), os.path.join("trained_models", pose, f"poseModule{epoch + 1}.pth"))
+    torch.save(poseModule.state_dict(), os.path.join("trained_models_" + mode, pose, f"poseModule{epoch + 1}.pth"))
 
 total_test_loss = 0
 with torch.no_grad():

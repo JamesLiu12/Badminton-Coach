@@ -28,8 +28,7 @@ class BoneData(Dataset):
     def __len__(self):
         return self.positive_len + self.negative_len
 
-
-# root_dir = "Data/Smash"
+# root_dir = "DynamicData/Smash"
 # label_dir = "positive"
 # smash_ds = BoneData(root_dir, label_dir, transforms.ToTensor())
 # print(len(smash_ds))
